@@ -23,9 +23,9 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-//db.sequelize.sync({ force: true }).then(() => {
-//  console.log("Drop and re-sync db.");
-//});
+db.sequelize.sync({ force: true }).then(() => {
+  console.log("Drop and re-sync db.");
+});
 
 const Op = Sequelize.Op;
 
