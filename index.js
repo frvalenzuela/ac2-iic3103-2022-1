@@ -1,7 +1,7 @@
 const express = require('express')
 const bodyParser = require("body-parser");
 const { Sequelize } = require('sequelize');
-const sequelize = new Sequelize(process.env.POSTGRES_URI_t1) 
+const sequelize = new Sequelize(process.env.DATABASE_URL) 
 const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
