@@ -1,6 +1,8 @@
 const express = require('express')
 const bodyParser = require("body-parser");
 const { Sequelize } = require('sequelize');
+const pg = require('pg');
+pg.defaults.ssl = true;
 const sequelize = new Sequelize(process.env.DATABASE_URL) 
 const db = {};
 db.Sequelize = Sequelize;
