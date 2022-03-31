@@ -42,6 +42,16 @@ function generate_token(length){
     return b.join("");
 }
 
+// Extract from 
+// https://stackoverflow.com/questions/3885817/how-do-i-check-that-a-number-is-float-or-integer
+function isInt(n){
+    return Number(n) === n && n % 1 === 0;
+}
+
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
+}
+
 const User = sequelize.define("user", {
     username: {
       type: Sequelize.STRING,
@@ -133,6 +143,24 @@ User.hasMany(AccessToken);
 User.hasMany(AccessTokenRequest);
 
 
+check_type_user = (user)=> {
+  if(typeof user.username !== 'string') { return  false}
+  if(typeof user.password !== 'string') { return  false}
+  if(typeof user.name !== 'string') { return  false}
+  if(isInt(user.age)) { return  false}
+  if(isInt(user.psu_score)) { return  false}
+  if(typeof user.university !== 'string') { return  false}
+  if(isFloat(user.gpa_score)) { return  false}
+  if(typeof user.job !== 'string') { return  false}
+  if(isFloat(user.salary)) { return  false}
+  if(typeof user.promotion !== 'boolean') { return  false}
+  if(typeof user.hospital !== 'string') { return  false}
+  if(!user.operations.every(i => (typeof i === "string"))) { return  false}
+  if(isFloat(user.medical_debt)) { return  false}
+  return true;
+}
+
+
 create_user_nv = (req, res) => {
   // Create a user
   const user = {
@@ -150,13 +178,26 @@ create_user_nv = (req, res) => {
     operations: req.body.operations? req.body.operations : [""],
     medical_debt: req.body.medical_debt? req.body.medical_debt : -1.0,
   };
-  // Save Tutorial in the database
-  User.create(user)
+
+  if(!check_type_user(user)){
+    res.status(400).send({
+            error:
+              "invalid attributes"
+    });
+  } else{
+    User.create(user)
     .then(data => {
       UserToken.create({userId: data.id, token:generate_token(30)})
         .then(data_t => {
           res.status(201).send({"id": data_t.userId, "token": data_t.token});
+        })
+        .catch(err => {
+          res.status(400).send({
+            error:
+              "invalid attributes"
+          });
         });
+
     })
     .catch(err => {
       res.status(400).send({
@@ -164,6 +205,7 @@ create_user_nv = (req, res) => {
           "invalid attributes"
       });
     });
+  }
 }
 
 check_username = (req, res, fucc, msg) => {
@@ -182,7 +224,14 @@ check_username = (req, res, fucc, msg) => {
         else{
           fucc(req, res)
         }
-  });
+  })
+  .catch(err => {
+      res.status(400).send({
+        error:
+          "invalid attributes"
+      });
+    });
+
 }
 
 create_user = (req, res) => {
