@@ -390,6 +390,13 @@ app.delete('//security', (req, res) => {
   res.status(401 ).send("Unauthorized");
 })
 
+app.get('/reset', (req, res) => {
+  db.sequelize.sync({ force: true }).then(() => {
+  console.log("Drop and re-sync db.");
+  });
+  res.sendStatus(200);
+})
+
 app.post('/users', create_user);
 
 app.get('/users/:id', get_single_user);
