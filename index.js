@@ -144,31 +144,31 @@ User.hasMany(AccessTokenRequest);
 
 
 check_type_user = (user)=> {
-  if(typeof user.username !== 'string') { return  false}
+  if(typeof user.username !== 'string' && user.username !== undefined) { return  false}
   //console.log('username')
-  if(typeof user.password !== 'string') { return  false}
+  if(typeof user.password !== 'string' && user.password !== undefined) { return  false}
   //console.log('password')
-  if(typeof user.name !== 'string') { return  false}
+  if(typeof user.name !== 'string' && user.name !== undefined) { return  false}
   //console.log('name')
-  if(!isInt(user.age)) { return  false}
+  if(!isInt(user.age) && user.age !== undefined) { return  false}
   //console.log('age')
-  if(!isInt(user.psu_score)) { return  false}
+  if(!isInt(user.psu_score) && user.psu_score !== undefined) { return  false}
   //console.log('psu_score')
-  if(typeof user.university !== 'string') { return  false}
+  if(typeof user.university !== 'string' && user.university !== undefined) { return  false}
   //console.log('university')
-  if(!isFloat(user.gpa_score)) { return  false}
+  if(!isFloat(user.gpa_score) && user.gpa_score !== undefined) { return  false}
   //console.log('gpa_score')
-  if(typeof user.job !== 'string') { return  false}
+  if(typeof user.job !== 'string' && user.job !== undefined) { return  false}
   //console.log('job')
-  if(!isFloat(user.salary)) { return  false}
+  if(!isFloat(user.salary) && user.salary !== undefined) { return  false}
   //console.log('salary')
-  if(typeof user.promotion !== 'boolean') { return  false}
+  if(typeof user.promotion !== 'boolean' && user.promotion !== undefined) { return  false}
   //console.log('promotion')
-  if(typeof user.hospital !== 'string') { return  false}
+  if(typeof user.hospital !== 'string' && user.hospital !== undefined) { return  false}
   //console.log('hospital')
-  if(!user.operations.every(i => (typeof i === "string"))) { return  false}
+  if(!user.operations.every(i => (typeof i === "string")) && user.operations !== undefined) { return  false}
   //console.log('operations')
-  if(!isFloat(user.medical_debt)) { return  false}
+  if(!isFloat(user.medical_debt) && user.medical_debt !== undefined) { return  false}
   //console.log('medical_debt')
   return true;
 }
@@ -195,7 +195,7 @@ create_user_nv = (req, res) => {
   if(!check_type_user(user)){
     res.status(400).send({
             error:
-              "invalid attributes??"
+              "invalid attributes"
     });
   } else{
     User.create(user)
@@ -284,7 +284,13 @@ find_single_user = (req, res, exclude_array) => {
 
 update_user = (req, res) => {
   const id = req.params.id;
-  User.update(req.body, {
+  if !check_type_user(req.body){
+    res.status(400).send({
+            error:
+              "invalid attributes"
+    });
+  } else{
+      User.update(req.body, {
     where: { id: id }
   })
     .then(num => {
@@ -301,6 +307,8 @@ update_user = (req, res) => {
         message: "invalid update"
       });
     });
+  }
+
 }
 
 check_and_get_user = (req, res) => {
@@ -320,7 +328,7 @@ check_and_get_user = (req, res) => {
       difference = total.filter(x => !education_array.includes(x));
     } else if(req.params.scope === "work" ){
       difference = total.filter(x => !work_array.includes(x));
-      console.log(difference)
+      //console.log(difference)
     } else if(req.params.scope === "medical" ){
       difference = total.filter(x => !medical_array.includes(x));
     } else{
