@@ -284,7 +284,7 @@ find_single_user = (req, res, exclude_array) => {
 
 update_user = (req, res) => {
   const id = req.params.id;
-  if !check_type_user(req.body){
+  if(!check_type_user(user)){
     res.status(400).send({
             error:
               "invalid attributes"
