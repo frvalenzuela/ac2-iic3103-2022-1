@@ -167,7 +167,7 @@ check_type_user = (user)=> {
   if(typeof user.hospital !== 'string' && user.hospital !== undefined) { return  false}
   //console.log('hospital')
   if(user.operations !== undefined) { 
-    if(!user.operations.every(i => (typeof i === "string")) && ){
+    if(!user.operations.every(i => (typeof i === "string"))){
       return  false
     }
   }
