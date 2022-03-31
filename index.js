@@ -166,7 +166,11 @@ check_type_user = (user)=> {
   //console.log('promotion')
   if(typeof user.hospital !== 'string' && user.hospital !== undefined) { return  false}
   //console.log('hospital')
-  if(!user.operations.every(i => (typeof i === "string")) && user.operations !== undefined) { return  false}
+  if(user.operations !== undefined) { 
+    if(!user.operations.every(i => (typeof i === "string")) && ){
+      return  false
+    }
+  }
   //console.log('operations')
   if(!isFloat(user.medical_debt) && user.medical_debt !== undefined) { return  false}
   //console.log('medical_debt')
