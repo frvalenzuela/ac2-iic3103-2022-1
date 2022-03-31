@@ -393,8 +393,8 @@ app.delete('//security', (req, res) => {
 app.get('/reset', (req, res) => {
   db.sequelize.sync({ force: true }).then(() => {
   console.log("Drop and re-sync db.");
-  });
   res.sendStatus(200);
+  });
 })
 
 app.post('/users', create_user);
