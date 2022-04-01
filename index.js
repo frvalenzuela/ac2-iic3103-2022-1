@@ -253,7 +253,7 @@ check_username = (req, res, fucc, msg) => {
 
 create_user = (req, res) => {
   // Validate request
-  if (!req.body.username && !req.body.name && !req.body.age ) {
+  if (!req.body.username || !req.body.name || !req.body.age ) {
     res.status(400).send({
       message: "invalid attributes"
     });
@@ -471,7 +471,7 @@ delete_single_user = (req, res) => {
 
 get_oauth_req = (req, res) => {
   const valid_scopes = ['basic', 'education', 'work', 'medical'];
-  if(!req.query.user_id && !req.query.scopes && !req.query.app_id){
+  if(!req.query.user_id || !req.query.scopes || !req.query.app_id){
     res.status(400).send({
             error:
             "invalid oauth request"
@@ -582,7 +582,7 @@ check_acc_tkn = (req, res) =>{
 
 user_grant = (req, res) =>{
   const valid_scopes = ['basic', 'education', 'work', 'medical'];
-  if(!req.query.user_id && !req.query.scopes && !req.query.app_id && !req.query.nonce) {
+  if(!req.query.user_id || !req.query.scopes || !req.query.app_id || !req.query.nonce) {
     res.status(400).send({
             error:
             "invalid oauth grant"
