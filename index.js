@@ -23,9 +23,9 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-db.sequelize.sync({ force: true }).then(() => {
-  console.log("Drop and re-sync db.");
-});
+//db.sequelize.sync({ force: true }).then(() => {
+//  console.log("Drop and re-sync db.");
+//});
 
 const Op = Sequelize.Op;
 
@@ -50,6 +50,12 @@ function isInt(n){
 
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
+}
+
+// Extract from 
+// https://stackoverflow.com/questions/34151834/javascript-array-contains-includes-sub-array
+function hasSubArray(master, sub) {
+    return sub.every((i => v => i = master.indexOf(v, i) + 1)(0));
 }
 
 const User = sequelize.define("user", {
@@ -122,6 +128,9 @@ const AccessToken = sequelize.define("accessToken", {
     expiration: {
       type: Sequelize.DATE
     },
+    token: {
+      type: Sequelize.STRING
+    }
 });
 
 const AccessTokenRequest = sequelize.define("accessTokenRequest", {
@@ -139,41 +148,32 @@ const AccessTokenRequest = sequelize.define("accessTokenRequest", {
 UserToken.belongsTo(User, {
      onDelete: 'CASCADE'
 });
-User.hasMany(AccessToken);
-User.hasMany(AccessTokenRequest);
+User.hasMany(AccessToken, {
+     onDelete: 'CASCADE'
+});
+User.hasMany(AccessTokenRequest, {
+     onDelete: 'CASCADE'
+});
 
 
 check_type_user = (user)=> {
   if(typeof user.username !== 'string' && user.username !== undefined) { return  false}
-  //console.log('username')
   if(typeof user.password !== 'string' && user.password !== undefined) { return  false}
-  //console.log('password')
   if(typeof user.name !== 'string' && user.name !== undefined) { return  false}
-  //console.log('name')
   if(!isInt(user.age) && user.age !== undefined) { return  false}
-  //console.log('age')
   if(!isInt(user.psu_score) && user.psu_score !== undefined) { return  false}
-  //console.log('psu_score')
   if(typeof user.university !== 'string' && user.university !== undefined) { return  false}
-  //console.log('university')
   if(!isFloat(user.gpa_score) && user.gpa_score !== undefined) { return  false}
-  //console.log('gpa_score')
   if(typeof user.job !== 'string' && user.job !== undefined) { return  false}
-  //console.log('job')
   if(!isFloat(user.salary) && user.salary !== undefined) { return  false}
-  //console.log('salary')
   if(typeof user.promotion !== 'boolean' && user.promotion !== undefined) { return  false}
-  //console.log('promotion')
   if(typeof user.hospital !== 'string' && user.hospital !== undefined) { return  false}
-  //console.log('hospital')
   if(user.operations !== undefined) { 
     if(!user.operations.every(i => (typeof i === "string"))){
       return  false
     }
   }
-  //console.log('operations')
   if(!isFloat(user.medical_debt) && user.medical_debt !== undefined) { return  false}
-  //console.log('medical_debt')
   return true;
 }
 
@@ -332,7 +332,6 @@ check_and_get_user = (req, res) => {
       difference = total.filter(x => !education_array.includes(x));
     } else if(req.params.scope === "work" ){
       difference = total.filter(x => !work_array.includes(x));
-      //console.log(difference)
     } else if(req.params.scope === "medical" ){
       difference = total.filter(x => !medical_array.includes(x));
     } else{
@@ -380,6 +379,53 @@ del_user = (req, res) => {
     });
 }
 
+check_exp_tkn = (acc_tkn_obj) => {
+  let diff = acc_tkn_obj.expiration - Date.now();
+  if (Math.abs(diff/ 1000) <= 60.0) {
+    return true;
+  } 
+  return false;
+}
+
+check_scope_tkn = (url, acc_tkn_obj) => {
+  const scope = url.split('/').slice(-1)[0]
+  return acc_tkn_obj.scopes.includes(scope)
+}
+
+token_acc_flow = (req, res, fucc) => {
+  const id = parseInt(req.params.id);
+  AccessToken.findOne({
+      where: {
+        token: req.headers.authorization,
+      }
+    })
+    .then(single_user => {
+          if (single_user === null) {
+            res.status(401).send({
+              error:
+              "invalid token"
+            });     
+          }
+          else{
+            if (single_user.userId !== id){
+              res.status(403).send({
+              error:
+              "you do not have access to this resource"
+            });
+            } else{
+              if(check_exp_tkn(single_user) && check_scope_tkn(req.originalUrl, single_user)){
+                fucc(req, res)
+              } else{
+                res.status(401).send({
+                  error:
+                  "invalid token"
+                });
+              }
+            }
+          }
+    });
+}
+
 token_flow = (req, res, fucc) => {
 const id = parseInt(req.params.id);
   if (!req.headers.authorization) {
@@ -394,10 +440,8 @@ const id = parseInt(req.params.id);
   })
   .then(single_user => {
         if (single_user === null) {
-          res.status(401).send({
-            error:
-            "invalid token"
-          });     
+
+          token_acc_flow(req, res, fucc)     
         }
         else{
           if (single_user.userId !== id){
@@ -424,6 +468,172 @@ delete_single_user = (req, res) => {
   token_flow(req, res, del_user)
 }
 
+get_oauth_req = (req, res) => {
+  const valid_scopes = ['basic', 'education', 'work', 'medical'];
+  if(!req.query.user_id && !req.query.scopes && !req.query.app_id){
+    res.status(400).send({
+            error:
+            "invalid oauth request"
+    });
+  } else{
+    const scopes = req.query.scopes.split(",")
+    const num = Number(req.query.user_id)
+    const condition_int = Number.isInteger(num) && num > 0
+    const condition_valid = condition_int && hasSubArray(valid_scopes, scopes)
+    const nonce_req = generate_token(20);
+    const url_out = req.originalUrl.replace('request', 'grant')+"&nonce="+nonce_req
+
+    if(!condition_valid){
+      res.status(400).send({
+            error:
+            "invalid oauth request"
+    })
+    } else{
+      const msg = req.query.app_id + "  está intentando acceder a " + req.query.scopes + ", ¿desea continuar?"
+      User.findOne({
+    attributes: {exclude: ['password']},
+    where: { id : num }
+  })
+    .then(data_u => {
+      if (data_u) {
+
+        const actokreq = {
+          app_id: req.app_id,
+          nonce: nonce_req,
+          expiration: Date.now()
+        }
+
+        AccessTokenRequest.create(actokreq)
+          .then(data => {
+            res.status(202).send({message: msg, grant_url: url_out, expiration: Number(data.expiration)});
+          })
+          .catch(err => {
+            res.status(500).send({
+              message:
+                err.message || "Some error occurred"
+            });
+          });
+      } else {
+        res.status(404).send({
+          message: `user not found`
+        });
+      }
+    })
+    .catch(err => {
+      res.status(500).send({
+        message: "Error retrieving user"
+      });
+    });
+    }
+  }
+}
+
+create_acc_tkn = (req, res) =>{
+  const acc_tkn = {
+          userId: req.query.user_id,
+          app_id: req.query.app_id,
+          scopes: req.query.scopes,
+          expiration: Date.now(),
+          token: generate_token(30)
+  }
+  AccessToken.create(acc_tkn)
+    .then(data_t => {
+      res.status(200).send({"access_token": data_t.token, "expiration": Number(data_t.expiration)});
+    })
+    .catch(err => {
+      res.status(503).send({
+        error:
+          "error acc token grant"
+      });
+    });
+}
+
+check_acc_tkn = (req, res) =>{
+  AccessTokenRequest.findOne({
+    where: { nonce : req.query.nonce }
+    })
+    .then(data => {
+
+      if (data === null) {
+          res.status(406).send({
+          message: `invalid authorization grant`
+        });    
+        }
+        else{
+          let diff = data.expiration - Date.now();
+          if (Math.abs(diff/ 1000) <= 10.0) {
+            create_acc_tkn(req, res);
+          } else {
+            res.status(406).send({
+              message: `invalid authorization grant`
+            });
+          }
+        }
+      
+    })
+    .catch(err => {
+      console.log(err)
+      res.status(500).send({
+        message: "Error retrieving acc_tkn"
+      });
+    });
+}
+
+user_grant = (req, res) =>{
+  const valid_scopes = ['basic', 'education', 'work', 'medical'];
+  if(!req.query.user_id && !req.query.scopes && !req.query.app_id && !req.query.nonce) {
+    res.status(400).send({
+            error:
+            "invalid oauth grant"
+    });
+  } else{
+    const scopes = req.query.scopes.split(",")
+    const condition_valid = hasSubArray(valid_scopes, scopes)
+
+    if(!condition_valid){
+      res.status(400).send({
+            error:
+            "invalid oauth grant"
+    })
+    } else{
+      User.findOne({
+    attributes: {exclude: ['password']},
+    where: { id : parseInt(req.query.user_id)}
+  })
+    .then(data_u => {
+      if (data_u) {
+        check_acc_tkn(req, res)  
+      } else {
+        res.status(404).send({
+          message: `user not found`
+        });
+      }
+    })
+    .catch(err => {
+      res.status(500).send({
+        message: "Error retrieving user"
+      });
+    });
+    }
+  
+
+    }
+}
+
+get_oauth_grant = (req, res) =>{
+  const num = Number(req.query.user_id)
+  const condition_int = Number.isInteger(num) && num > 0
+  if(!condition_int){
+      res.status(400).send({
+            error:
+            "invalid oauth grant"
+    })
+  } else{
+    req.params.id = req.query.user_id
+    token_flow(req, res, user_grant)
+  }
+  
+}
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -479,6 +689,10 @@ app.get('/users/:id/:scope', get_single_user);
 app.patch('/users/:id', update_single_user);
 
 app.delete('/users/:id', delete_single_user);
+
+app.get('/oauth/request', get_oauth_req);
+
+app.get('/oauth/grant', get_oauth_grant);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
