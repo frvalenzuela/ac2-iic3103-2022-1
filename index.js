@@ -388,6 +388,7 @@ check_exp_tkn = (acc_tkn_obj) => {
 }
 
 check_scope_tkn = (url, acc_tkn_obj) => {
+  if(url === undefined){return false}
   const scope = url.split('/').slice(-1)[0]
   return acc_tkn_obj.scopes.includes(scope)
 }
