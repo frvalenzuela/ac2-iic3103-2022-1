@@ -630,9 +630,9 @@ get_oauth_grant = (req, res) =>{
   const num = Number(req.query.user_id)
   const condition_int = Number.isInteger(num) && num > 0
   if(!condition_int){
-      res.status(404).send({
+      res.status(403).send({
             error:
-            "user not found"
+            "you don't have access to this resource"
     })
   } else{
     req.params.id = req.query.user_id
