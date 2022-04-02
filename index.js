@@ -53,9 +53,9 @@ function isFloat(n){
 }
 
 // Extract from 
-// https://stackoverflow.com/questions/34151834/javascript-array-contains-includes-sub-array
+// https://stackoverflow.com/questions/16312528/check-if-an-array-contains-any-element-of-another-array-in-javascript
 function hasSubArray(master, sub) {
-    return sub.every((i => v => i = master.indexOf(v, i) + 1)(0));
+    return master.some(r=> sub.includes(r));
 }
 
 const User = sequelize.define("user", {
@@ -480,7 +480,7 @@ get_oauth_req = (req, res) => {
     const scopes = req.query.scopes.split(",")
     const num = Number(req.query.user_id)
     const condition_int = Number.isInteger(num) && num > 0
-    const condition_valid = condition_int && hasSubArray(valid_scopes, scopes)
+    const condition_valid = hasSubArray(valid_scopes, scopes)
     const nonce_req = generate_token(20);
     const url_out = req.originalUrl.replace('request', 'grant')+"&nonce="+nonce_req
 
@@ -492,7 +492,7 @@ get_oauth_req = (req, res) => {
     } else if(!condition_valid){
       res.status(400).send({
             error:
-            "invalid oauth request"
+            "invalid oauth request?"
     })
     }else{
       const msg = req.query.app_id + "  está intentando acceder a " + req.query.scopes + ", ¿desea continuar?"
