@@ -484,12 +484,17 @@ get_oauth_req = (req, res) => {
     const nonce_req = generate_token(20);
     const url_out = req.originalUrl.replace('request', 'grant')+"&nonce="+nonce_req
 
-    if(!condition_valid){
+    if(!condition_int){
+      res.status(404).send({
+            error:
+            "user not found"
+    })
+    } else if(!condition_valid){
       res.status(400).send({
             error:
             "invalid oauth request"
     })
-    } else{
+    }else{
       const msg = req.query.app_id + "  está intentando acceder a " + req.query.scopes + ", ¿desea continuar?"
       User.findOne({
     attributes: {exclude: ['password']},
@@ -625,9 +630,9 @@ get_oauth_grant = (req, res) =>{
   const num = Number(req.query.user_id)
   const condition_int = Number.isInteger(num) && num > 0
   if(!condition_int){
-      res.status(400).send({
+      res.status(404).send({
             error:
-            "invalid oauth grant"
+            "user not found"
     })
   } else{
     req.params.id = req.query.user_id
